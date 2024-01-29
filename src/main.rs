@@ -14,11 +14,10 @@ fn main() {
     let file_string =
         fs::read_to_string(path).expect("unable to read provided file or file does not exist.");
 
-    println!("{file_string}");
-
     let tokens = get_token(file_string);
 
     for token in tokens.iter() {
         println!("{token}");
     }
+    //
 }

@@ -1,8 +1,9 @@
+#![allow(dead_code)]
 use std::fmt;
 
 enum TokenType {
     Func,
-    Accepts,
+    Uses,
     Colon,
     Int,
     Double,
@@ -28,13 +29,15 @@ enum TokenType {
     Divide,
     Percent,
     Power,
+    Identifier,
+    Comma,
 }
 
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             TokenType::Func => write!(f, "Func"),
-            TokenType::Accepts => write!(f, "Accepts"),
+            TokenType::Uses => write!(f, "Uses"),
             TokenType::Colon => write!(f, "Colon"),
             TokenType::Int => write!(f, "Int"),
             TokenType::Double => write!(f, "Double"),
@@ -60,6 +63,44 @@ impl fmt::Display for TokenType {
             TokenType::Divide => write!(f, "Divide"),
             TokenType::Percent => write!(f, "Percent"),
             TokenType::Power => write!(f, "Power"),
+            TokenType::Identifier => write!(f, "Identifier"),
+            TokenType::Comma => write!(f, "Comma"),
+        }
+    }
+}
+
+impl TokenType {
+    fn from_str(s: &str) -> TokenType {
+        match s.to_lowercase().as_str() {
+            "func" => TokenType::Func,
+            "uses" => TokenType::Uses,
+            ":" => TokenType::Colon,
+            "int" => TokenType::Int,
+            "double" => TokenType::Double,
+            "if" => TokenType::If,
+            "then" => TokenType::Then,
+            "return" => TokenType::Return,
+            "else" => TokenType::Else,
+            "done" => TokenType::Done,
+            "set" => TokenType::Set,
+            "to" => TokenType::To,
+            "lt" => TokenType::Lt,
+            "lte" => TokenType::Lte,
+            "eq" => TokenType::Eq,
+            "gt" => TokenType::Gt,
+            "gte" => TokenType::Gte,
+            "not" => TokenType::Not,
+            "\"" => TokenType::Quote,
+            "(" => TokenType::OpenParenthesis,
+            ")" => TokenType::CloseParenthesis,
+            "+" => TokenType::Add,
+            "-" => TokenType::Subtract,
+            "*" => TokenType::Multiply,
+            "/" => TokenType::Divide,
+            "%" => TokenType::Percent,
+            "^" => TokenType::Power,
+            "," => TokenType::Comma,
+            _ => TokenType::Identifier,
         }
     }
 }
@@ -67,26 +108,53 @@ impl fmt::Display for TokenType {
 pub struct Token {
     token: TokenType,
     value: Option<i64>,
+    lexeme: String,
 }
 
 impl Token {
-    fn new(token: TokenType, value: Option<i64>) -> Token {
-        Token { token, value }
+    fn new(token: TokenType, value: Option<i64>, lexeme: String) -> Token {
+        Token {
+            token,
+            value,
+            lexeme,
+        }
     }
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.value {
-            Some(value) => write!(f, "token type: {} | optional value: {}", self.token, value),
-            None => write!(f, "token type: {} | no value", self.token),
+            Some(value) => write!(
+                f,
+                "token type: {} | optional value: {} | text: {}",
+                self.token, value, self.lexeme
+            ),
+            None => write!(f, "token type: {} | text: {}", self.token, self.lexeme),
         }
     }
 }
 
-pub fn get_token(file: String) -> Vec<Token> {
+pub fn get_token(data: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
+    let mut buffer = String::new();
 
-    tokens.push(Token::new(TokenType::Eq, Some(5)));
+    for c in data.chars() {
+        if c.is_whitespace() || c == '\n' {
+            let token_type = TokenType::from_str(&buffer);
+            tokens.push(Token::new(token_type, None, buffer.clone()));
+            buffer.clear();
+            continue;
+        }
+
+        while c.is_alphanumeric() {
+            buffer += &c.to_string();
+            continue;
+        }
+
+        buffer += &c.to_string();
+    }
+
+    // test code
+    // tokens.push(Token::new(TokenType::Eq, Some(5)));
     return tokens;
 }
