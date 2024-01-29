@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::fmt;
+use std::fmt::{self};
 
 enum TokenType {
     Func,
@@ -31,6 +31,9 @@ enum TokenType {
     Power,
     Identifier,
     Comma,
+    Newline,
+    Integer(i64),
+    Float(f64),
 }
 
 impl fmt::Display for TokenType {
@@ -65,6 +68,9 @@ impl fmt::Display for TokenType {
             TokenType::Power => write!(f, "Power"),
             TokenType::Identifier => write!(f, "Identifier"),
             TokenType::Comma => write!(f, "Comma"),
+            TokenType::Newline => write!(f, "Newline"),
+            TokenType::Integer(n) => write!(f, "integer: {n}"),
+            TokenType::Float(n) => write!(f, "integer: {n}"),
         }
     }
 }
@@ -107,30 +113,18 @@ impl TokenType {
 
 pub struct Token {
     token: TokenType,
-    value: Option<i64>,
     lexeme: String,
 }
 
 impl Token {
-    fn new(token: TokenType, value: Option<i64>, lexeme: String) -> Token {
-        Token {
-            token,
-            value,
-            lexeme,
-        }
+    fn new(token: TokenType, lexeme: String) -> Token {
+        Token { token, lexeme }
     }
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.value {
-            Some(value) => write!(
-                f,
-                "token type: {} | optional value: {} | text: {}",
-                self.token, value, self.lexeme
-            ),
-            None => write!(f, "token type: {} | text: {}", self.token, self.lexeme),
-        }
+        write!(f, "token type: {} | text: {}", self.token, self.lexeme)
     }
 }
 
@@ -138,20 +132,56 @@ pub fn get_token(data: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut buffer = String::new();
 
+    // newline, number (int or float), identifier (starts with alphanumeric always), and all other tokens
     for c in data.chars() {
-        if c.is_whitespace() || c == '\n' {
+        if c == ' ' {
+            // save buffer as token + value
             let token_type = TokenType::from_str(&buffer);
-            tokens.push(Token::new(token_type, None, buffer.clone()));
+            tokens.push(Token::new(token_type, buffer.clone()));
             buffer.clear();
-            continue;
-        }
+        } else if c == '\n' {
+            // add newline token, will things be in the buffer?
+            tokens.push(Token::new(TokenType::Newline, String::from("")));
+            buffer.clear();
+        } else if c.is_alphanumeric() {
+            buffer.push(c);
+        } else if c.is_digit(10) {
+            while c.is_digit(10) {
+                buffer.push(c);
+                continue;
+            }
+            if c == '.' {
+                buffer.push('.');
+                while c.is_digit(10) {
+                    buffer.push(c);
+                }
 
-        while c.is_alphanumeric() {
-            buffer += &c.to_string();
-            continue;
-        }
+                let token_float = match buffer.parse::<f64>() {
+                    Ok(n) => n,
+                    Err(_) => {
+                        println!("Failed to parse float: {}", buffer);
+                        0.0
+                    }
+                };
+                tokens.push(Token::new(TokenType::Float(token_float), buffer.clone()));
+                buffer.clear();
+                continue;
+            } else {
+                let token_int = match buffer.parse::<i64>() {
+                    Ok(n) => n,
+                    Err(_) => {
+                        println!("Failed to parse integer: {}", buffer);
+                        0
+                    }
+                };
 
-        buffer += &c.to_string();
+                tokens.push(Token::new(TokenType::Integer(token_int), buffer.clone()));
+                buffer.clear();
+            }
+        } else {
+            // undefined token?
+            println!("the undefined token is {c}");
+        }
     }
 
     // test code
