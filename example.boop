@@ -1,0 +1,7 @@
+func fib uses x, y, z
+    if x lt 3 then return 1
+    else return fib(x-1) + fib(x-2)
+done
+
+set x to 40
+fib(x)
