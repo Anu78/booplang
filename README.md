@@ -1,31 +1,16 @@
 # english -> programming
 
-## list of tokens
-
-int
-double
-string
-
-func / accepts
-if
-then
-else
-
-for
-
-return
-
 ## sample syntax
 ```
-    func fib uses x, y, z
-        if x lt 3 then return 1
-        else return fib(x-1) + fib(x-2)
-    done
+func fib uses x, y, z
+    if x lt 3 then return 1
+    else return fib(x-1) + fib(x-2)
+done
 
-    x is 40
-    fib(x)
+x is 40
+fib(x)
 ```
-^ a source code block
+This is some sample source code. The exact wording and syntax is not final, but the general idea is that the language should allow the programmer to type as fast as possible.
 
 ## the main goal
 
