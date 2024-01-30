@@ -1,6 +1,7 @@
 #![allow(dead_code)]
-use std::fmt::{self};
+use std::fmt;
 
+#[derive(Debug, PartialEq)]
 enum TokenType {
     Func,
     Uses,
@@ -29,7 +30,7 @@ enum TokenType {
     Divide,
     Percent,
     Power,
-    Identifier,
+    Identifier(String),
     Comma,
     Newline,
     Integer(i64),
@@ -66,7 +67,7 @@ impl fmt::Display for TokenType {
             TokenType::Divide => write!(f, "Divide"),
             TokenType::Percent => write!(f, "Percent"),
             TokenType::Power => write!(f, "Power"),
-            TokenType::Identifier => write!(f, "Identifier"),
+            TokenType::Identifier(s) => write!(f, "Identifier: {s}"),
             TokenType::Comma => write!(f, "Comma"),
             TokenType::Newline => write!(f, "Newline"),
             TokenType::Integer(n) => write!(f, "integer: {n}"),
@@ -106,34 +107,25 @@ impl TokenType {
             "%" => TokenType::Percent,
             "^" => TokenType::Power,
             "," => TokenType::Comma,
-            _ => TokenType::Identifier,
+            _ => TokenType::Identifier(String::from(s)),
         }
     }
 }
-
+#[derive(Debug, PartialEq)]
 pub struct Token {
     token: TokenType,
-    lexeme: String,
     line_number: i32,
 }
 
 impl Token {
-    fn new(token: TokenType, lexeme: String, line_number: i32) -> Token {
-        Token {
-            token,
-            lexeme,
-            line_number,
-        }
+    fn new(token: TokenType, line_number: i32) -> Token {
+        Token { token, line_number }
     }
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "token type: {} | text: {} | on line {}",
-            self.token, self.lexeme, self.line_number
-        )
+        write!(f, "{} | on line {}", self.token, self.line_number)
     }
 }
 
@@ -147,12 +139,12 @@ fn process_buffer(buffer: &mut String, tokens: &mut Vec<Token>, line_number: i32
             TokenType::from_str(&buffer)
         };
 
-        tokens.push(Token::new(token_type, buffer.clone(), line_number));
+        tokens.push(Token::new(token_type, line_number));
         buffer.clear();
     }
 }
 
-pub fn get_tokens(data: String) -> Vec<Token> {
+pub fn get_tokens(data: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut buffer = String::new();
     let mut line_number: i32 = 1;
@@ -164,12 +156,8 @@ pub fn get_tokens(data: String) -> Vec<Token> {
         if c.is_whitespace() {
             process_buffer(&mut buffer, &mut tokens, line_number);
             if c == '\n' {
+                tokens.push(Token::new(TokenType::Newline, line_number));
                 line_number += 1;
-                tokens.push(Token::new(
-                    TokenType::Newline,
-                    String::from(""),
-                    line_number,
-                ));
             }
             chars.next();
         } else if c.is_alphanumeric() {
@@ -193,16 +181,34 @@ pub fn get_tokens(data: String) -> Vec<Token> {
         }
     }
 
+    if !buffer.is_empty() {
+        process_buffer(&mut buffer, &mut tokens, line_number);
+    }
+
     tokens
 }
 
-// unit testing
+// unit testing for lexer
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn it_adds_two() {
-        assert_eq!(4, 2 + 2);
+    // test integer and float parsing
+    fn test_integer_float_parsing() {
+        let test_input = "40.65 21 2.004";
+        let tokens = get_tokens(test_input);
+        let expected = [
+            Token::new(TokenType::Float(40.65), 1),
+            Token::new(TokenType::Integer(21), 1),
+            Token::new(TokenType::Float(2.004), 1),
+        ];
+
+        assert_eq!(tokens, expected);
     }
+    // test parenthesis and content between
+
+    // test all keywords
+
+    // test
 }
