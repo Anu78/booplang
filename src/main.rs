@@ -1,5 +1,5 @@
 mod lexer;
-use lexer::get_token;
+use lexer::get_tokens;
 use std::fs;
 
 fn main() {
@@ -12,9 +12,9 @@ fn main() {
     let path = path.unwrap();
 
     let file_string =
-        fs::read_to_string(path).expect("unable to read provided file or file does not exist.");
+        fs::read_to_string(path).expect("unable to read provided file or file does not exist .");
 
-    let tokens = get_token(file_string);
+    let tokens = get_tokens(file_string);
 
     for token in tokens.iter() {
         println!("{token}");

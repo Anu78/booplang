@@ -70,7 +70,7 @@ impl fmt::Display for TokenType {
             TokenType::Comma => write!(f, "Comma"),
             TokenType::Newline => write!(f, "Newline"),
             TokenType::Integer(n) => write!(f, "integer: {n}"),
-            TokenType::Float(n) => write!(f, "integer: {n}"),
+            TokenType::Float(n) => write!(f, "float: {n}"),
         }
     }
 }
@@ -114,77 +114,95 @@ impl TokenType {
 pub struct Token {
     token: TokenType,
     lexeme: String,
+    line_number: i32,
 }
 
 impl Token {
-    fn new(token: TokenType, lexeme: String) -> Token {
-        Token { token, lexeme }
+    fn new(token: TokenType, lexeme: String, line_number: i32) -> Token {
+        Token {
+            token,
+            lexeme,
+            line_number,
+        }
     }
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "token type: {} | text: {}", self.token, self.lexeme)
+        write!(
+            f,
+            "token type: {} | text: {} | on line {}",
+            self.token, self.lexeme, self.line_number
+        )
     }
 }
 
-pub fn get_token(data: String) -> Vec<Token> {
+fn process_buffer(buffer: &mut String, tokens: &mut Vec<Token>, line_number: i32) {
+    if !buffer.is_empty() {
+        let token_type = if let Ok(n) = buffer.parse::<i64>() {
+            TokenType::Integer(n)
+        } else if let Ok(n) = buffer.parse::<f64>() {
+            TokenType::Float(n)
+        } else {
+            TokenType::from_str(&buffer)
+        };
+
+        tokens.push(Token::new(token_type, buffer.clone(), line_number));
+        buffer.clear();
+    }
+}
+
+pub fn get_tokens(data: String) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut buffer = String::new();
+    let mut line_number: i32 = 1;
+    let special_chars = ['(', ')', ',', '+', '-', '*', '/', '^', '%', '\"'];
 
-    // newline, number (int or float), identifier (starts with alphanumeric always), and all other tokens
-    for c in data.chars() {
-        if c == ' ' {
-            // save buffer as token + value
-            let token_type = TokenType::from_str(&buffer);
-            tokens.push(Token::new(token_type, buffer.clone()));
-            buffer.clear();
-        } else if c == '\n' {
-            // add newline token, will things be in the buffer?
-            tokens.push(Token::new(TokenType::Newline, String::from("")));
-            buffer.clear();
+    let mut chars = data.chars().peekable();
+
+    while let Some(&c) = chars.peek() {
+        if c.is_whitespace() {
+            process_buffer(&mut buffer, &mut tokens, line_number);
+            if c == '\n' {
+                line_number += 1;
+                tokens.push(Token::new(
+                    TokenType::Newline,
+                    String::from(""),
+                    line_number,
+                ));
+            }
+            chars.next();
         } else if c.is_alphanumeric() {
+            buffer.push(chars.next().unwrap());
+        } else if special_chars.contains(&c) {
+            process_buffer(&mut buffer, &mut tokens, line_number);
+            buffer.clear();
             buffer.push(c);
-        } else if c.is_digit(10) {
-            while c.is_digit(10) {
-                buffer.push(c);
-                continue;
-            }
-            if c == '.' {
-                buffer.push('.');
-                while c.is_digit(10) {
-                    buffer.push(c);
-                }
-
-                let token_float = match buffer.parse::<f64>() {
-                    Ok(n) => n,
-                    Err(_) => {
-                        println!("Failed to parse float: {}", buffer);
-                        0.0
-                    }
-                };
-                tokens.push(Token::new(TokenType::Float(token_float), buffer.clone()));
-                buffer.clear();
-                continue;
-            } else {
-                let token_int = match buffer.parse::<i64>() {
-                    Ok(n) => n,
-                    Err(_) => {
-                        println!("Failed to parse integer: {}", buffer);
-                        0
-                    }
-                };
-
-                tokens.push(Token::new(TokenType::Integer(token_int), buffer.clone()));
-                buffer.clear();
-            }
+            process_buffer(&mut buffer, &mut tokens, line_number);
+            chars.next();
+        } else if c.is_digit(10) || (c == '.' || buffer.chars().all(char::is_numeric)) {
+            buffer.push(chars.next().unwrap());
         } else {
-            // undefined token?
-            println!("the undefined token is {c}");
+            process_buffer(&mut buffer, &mut tokens, line_number);
+            buffer.push(chars.next().unwrap());
+            if let Some(&next_char) = chars.peek() {
+                if next_char.is_whitespace() || next_char.is_digit(10) {
+                    process_buffer(&mut buffer, &mut tokens, line_number);
+                }
+            }
         }
     }
 
-    // test code
-    // tokens.push(Token::new(TokenType::Eq, Some(5)));
-    return tokens;
+    tokens
+}
+
+// unit testing
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_adds_two() {
+        assert_eq!(4, 2 + 2);
+    }
 }

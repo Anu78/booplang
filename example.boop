@@ -3,5 +3,5 @@ func fib uses x, y, z
     else return fib(x-1) + fib(x-2)
 done
 
-set x to 40
+set x to 40.65
 fib(x)
