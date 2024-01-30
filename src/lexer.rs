@@ -228,7 +228,6 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     // test integer and float parsing
@@ -288,10 +287,16 @@ mod tests {
     // test all keywords
     #[test]
     fn test_complete_program() {
-        let file_string = fs::read_to_string("./example.boop")
-            .expect("unable to read provided file or file does not exist .");
+        let file_string = " func fib uses x, y, z
+                if x lt 3 return 1
+                else return fib(x-1) + fib(x-2)
+            end
 
-        let tokens = get_tokens(&file_string);
+            x is 40
+            y is \"hello world\"
+            fib(x) "; // !TODO: fix this later
+
+        let tokens = get_tokens(file_string);
 
         let expected = [
             // func fib uses x, y, z
