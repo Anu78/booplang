@@ -36,8 +36,8 @@ enum TokenType {
     Power,
     OpenParenthesis,
     CloseParenthesis,
-    Quote,
     Identifier(String),
+    StringLiteral(String),
     Comma,
     Newline,
     Integer(i64),
@@ -80,7 +80,7 @@ impl fmt::Display for TokenType {
             TokenType::Power => write!(f, "Power"),
             TokenType::OpenParenthesis => write!(f, "OpenParenthesis"),
             TokenType::CloseParenthesis => write!(f, "CloseParenthesis"),
-            TokenType::Quote => write!(f, "Quote"),
+            TokenType::StringLiteral(s) => write!(f, "String: {}", s),
             TokenType::Identifier(val) => write!(f, "Identifier({})", val),
             TokenType::Comma => write!(f, "Comma"),
             TokenType::Newline => write!(f, "Newline"),
@@ -106,7 +106,6 @@ impl TokenType {
             "gt" => TokenType::Gt,
             "gte" => TokenType::Gte,
             "not" => TokenType::Not,
-            "\"" => TokenType::Quote,
             "(" => TokenType::OpenParenthesis,
             ")" => TokenType::CloseParenthesis,
             "+" => TokenType::Add,
@@ -119,7 +118,7 @@ impl TokenType {
             "until" => TokenType::Until,
             "break" => TokenType::Break,
             "continue" => TokenType::Continue,
-            "elseif" => TokenType::ElseIf,
+            "elif" => TokenType::ElseIf,
             "do" => TokenType::Do,
             "is" => TokenType::Is,
             "false" => TokenType::False,
@@ -158,7 +157,7 @@ impl fmt::Display for Token {
 }
 
 fn process_buffer(buffer: &mut String, tokens: &mut Vec<Token>, line_number: i32) {
-    if !buffer.is_empty() {
+    if !buffer.is_empty() && !buffer.chars().all(char::is_whitespace){
         let token_type = TokenType::from_str(&buffer);
 
         tokens.push(Token::new(token_type, line_number));
@@ -170,7 +169,7 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut buffer = String::new();
     let mut line_number: i32 = 1;
-    let special_chars = ['(', ')', ',', '+', '-', '*', '/', '^', '%', '\"'];
+    let special_chars = ['(', ')', ',', '+', '-', '*', '/', '^', '%'];
 
     let mut chars = data.chars().peekable();
 
@@ -182,6 +181,21 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
                 line_number += 1;
             }
             chars.next();
+        } else if c == '"' {
+            process_buffer(&mut buffer, &mut tokens, line_number); // quote is a delimiter
+
+            chars.next(); // advance iterator to get over initial char
+            while let Some(next) = chars.next() {
+                if next == '"' {
+                    break;
+                }
+                buffer.push(next);
+            }
+            tokens.push(Token::new(
+                TokenType::StringLiteral(buffer.clone()),
+                line_number,
+            ));
+            buffer.clear();
         } else if c.is_alphanumeric() {
             buffer.push(chars.next().unwrap());
         } else if special_chars.contains(&c) {
@@ -259,15 +273,85 @@ mod tests {
     }
 
     // test quotations
+    #[test]
     fn test_quotes() {
         let test_input = "\"this is a sample string\"";
+        let tokens = get_tokens(test_input);
+
+        let expected = [Token::new(
+            TokenType::StringLiteral(String::from("this is a sample string")),
+            1,
+        )];
+
+        assert_eq!(tokens, expected);
     }
     // test all keywords
+    #[test]
     fn test_complete_program() {
         let file_string = fs::read_to_string("./example.boop")
             .expect("unable to read provided file or file does not exist .");
 
         let tokens = get_tokens(&file_string);
+
+        let expected = [
+            // func fib uses x, y, z
+            Token::new(TokenType::Function, 1),
+            Token::new(TokenType::Identifier(String::from("fib")), 1),
+            Token::new(TokenType::Uses, 1),
+            Token::new(TokenType::Identifier(String::from("x")), 1),
+            Token::new(TokenType::Comma, 1),
+            Token::new(TokenType::Identifier(String::from("y")), 1),
+            Token::new(TokenType::Comma, 1),
+            Token::new(TokenType::Identifier(String::from("z")), 1),
+            Token::new(TokenType::Newline, 1),
+            // if x lt 3 return 1
+            Token::new(TokenType::If, 2),
+            Token::new(TokenType::Identifier(String::from("x")), 2),
+            Token::new(TokenType::Lt, 2),
+            Token::new(TokenType::Integer(3), 2),
+            Token::new(TokenType::Return, 2),
+            Token::new(TokenType::Integer(1), 2),
+            Token::new(TokenType::Newline, 2),
+            // else return fib(x-1) + fib(x-2)
+            Token::new(TokenType::Else, 3),
+            Token::new(TokenType::Return, 3),
+            Token::new(TokenType::Identifier(String::from("fib")), 3),
+            Token::new(TokenType::OpenParenthesis, 3),
+            Token::new(TokenType::Identifier(String::from("x")), 3),
+            Token::new(TokenType::Subtract, 3),
+            Token::new(TokenType::Integer(1), 3),
+            Token::new(TokenType::CloseParenthesis, 3),
+            Token::new(TokenType::Add, 3),
+            Token::new(TokenType::Identifier(String::from("fib")), 3),
+            Token::new(TokenType::OpenParenthesis, 3),
+            Token::new(TokenType::Identifier(String::from("x")), 3),
+            Token::new(TokenType::Subtract, 3),
+            Token::new(TokenType::Integer(2), 3),
+            Token::new(TokenType::CloseParenthesis, 3),
+            Token::new(TokenType::Newline, 3),
+            // end
+            Token::new(TokenType::End, 4),
+            Token::new(TokenType::Newline, 4),
+            // newline
+            Token::new(TokenType::Newline, 5),
+            // x is 40
+            Token::new(TokenType::Identifier(String::from("x")), 6),
+            Token::new(TokenType::Is, 6),
+            Token::new(TokenType::Integer(40), 6),
+            Token::new(TokenType::Newline, 6),
+            // y is "hello world"
+            Token::new(TokenType::Identifier(String::from("y")), 7),
+            Token::new(TokenType::Is, 7),
+            Token::new(TokenType::StringLiteral(String::from("hello world")), 7),
+            Token::new(TokenType::Newline, 7),
+            // fib(x)
+            Token::new(TokenType::Identifier(String::from("fib")), 8),
+            Token::new(TokenType::OpenParenthesis, 8),
+            Token::new(TokenType::Identifier(String::from("x")), 8),
+            Token::new(TokenType::CloseParenthesis, 8),
+        ];
+
+        assert_eq!(tokens, expected);
     }
-    // test
+    
 }
