@@ -1,3 +1,6 @@
+note: this is an example file that describes how the syntax works
+
+
 func fib uses x, y, z
     if x lt 3 return 1
     else return fib(x-1) + fib(x-2)

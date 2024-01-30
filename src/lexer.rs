@@ -157,7 +157,7 @@ impl fmt::Display for Token {
 }
 
 fn process_buffer(buffer: &mut String, tokens: &mut Vec<Token>, line_number: i32) {
-    if !buffer.is_empty() && !buffer.chars().all(char::is_whitespace){
+    if !buffer.is_empty() && !buffer.chars().all(char::is_whitespace) {
         let token_type = TokenType::from_str(&buffer);
 
         tokens.push(Token::new(token_type, line_number));
@@ -175,6 +175,15 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
 
     while let Some(&c) = chars.peek() {
         if c.is_whitespace() {
+            if buffer == "note" {
+                while let Some(next) = chars.next() {
+                    if next == '\n' {
+                        line_number += 1;
+                        break;
+                    }
+                }
+                buffer.clear();
+            }
             process_buffer(&mut buffer, &mut tokens, line_number);
             if c == '\n' {
                 tokens.push(Token::new(TokenType::Newline, line_number));
@@ -184,7 +193,7 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
         } else if c == '"' {
             process_buffer(&mut buffer, &mut tokens, line_number); // quote is a delimiter
 
-            chars.next(); // advance iterator to get over initial char
+            chars.next(); // advance iterator to get over initial quote
             while let Some(next) = chars.next() {
                 if next == '"' {
                     break;
@@ -199,6 +208,7 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
         } else if c.is_alphanumeric() {
             buffer.push(chars.next().unwrap());
         } else if special_chars.contains(&c) {
+            // TODO - clean up
             process_buffer(&mut buffer, &mut tokens, line_number);
             buffer.clear();
             buffer.push(c);
@@ -207,13 +217,9 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
         } else if c.is_digit(10) || (c == '.' || buffer.chars().all(char::is_numeric)) {
             buffer.push(chars.next().unwrap());
         } else {
-            process_buffer(&mut buffer, &mut tokens, line_number);
-            buffer.push(chars.next().unwrap());
-            if let Some(&next_char) = chars.peek() {
-                if next_char.is_whitespace() || next_char.is_digit(10) {
-                    process_buffer(&mut buffer, &mut tokens, line_number);
-                }
-            }
+            // ignore extra chars
+            chars.next();
+            continue;
         }
     }
 
@@ -358,5 +364,43 @@ mod tests {
 
         assert_eq!(tokens, expected);
     }
-    
+
+    // test ignoring of comments
+    // comments discard the whole line that starts with "note"
+    #[test]
+    fn test_comments() {
+        let test_input_1 = "note: func fib uses x
+        x is 4003";
+        let tokens1 = get_tokens(test_input_1);
+        let expected1 = [
+            Token::new(TokenType::Identifier(String::from("x")), 2),
+            Token::new(TokenType::Is, 2),
+            Token::new(TokenType::Integer(4003), 2),
+        ];
+
+        assert_eq!(tokens1, expected1);
+
+        let test_input_2 = "note: this is a test comment"; //
+        let tokens2 = get_tokens(test_input_2);
+        assert!(tokens2.len() == 0);
+    }
+
+    // test odd whitespace configurations
+    #[test]
+    fn test_white_space_handling() {
+        let test_input = "   func   fib   uses x,   y, z";
+        let tokens = get_tokens(test_input);
+        let expected = [
+            Token::new(TokenType::Function, 1),
+            Token::new(TokenType::Identifier(String::from("fib")), 1),
+            Token::new(TokenType::Uses, 1),
+            Token::new(TokenType::Identifier(String::from("x")), 1),
+            Token::new(TokenType::Comma, 1),
+            Token::new(TokenType::Identifier(String::from("y")), 1),
+            Token::new(TokenType::Comma, 1),
+            Token::new(TokenType::Identifier(String::from("z")), 1),
+        ];
+
+        assert_eq!(tokens, expected);
+    }
 }
