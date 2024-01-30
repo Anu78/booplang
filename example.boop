@@ -1,7 +1,11 @@
-func fib uses x, y, z
-    if x lt 3 then return 1
-    else return fib(x-1) + fib(x-2)
-done
+note: this is an example file that describes how the syntax works
 
-set x to 40.65
+
+func fib uses x, y, z
+    if x lt 3 return 1
+    else return fib(x-1) + fib(x-2)
+end
+
+x is 40
+y is "hello world"
 fib(x)
