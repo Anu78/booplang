@@ -3,33 +3,40 @@ use std::fmt;
 
 #[derive(Debug, PartialEq)]
 enum TokenType {
-    Func,
-    Uses,
-    Colon,
-    Int,
-    Double,
+    Note,
+    Lte,
+    Gte,
+    Gt,
+    Lt,
+    Neq,
+    Eq,
+    For,
+    Until,
+    Break,
+    Continue,
     If,
     Then,
-    Return,
     Else,
-    Done,
-    Set,
-    To,
-    Lt,
-    Lte,
-    Eq,
-    Gt,
-    Gte,
+    ElseIf,
+    Do,
+    End,
+    Is,
+    False,
+    True,
+    Function,
+    Uses,
+    Or,
+    And,
     Not,
-    Quote,
-    OpenParenthesis,
-    CloseParenthesis,
+    Return,
+    Multiply,
     Add,
     Subtract,
-    Multiply,
     Divide,
-    Percent,
     Power,
+    OpenParenthesis,
+    CloseParenthesis,
+    Quote,
     Identifier(String),
     Comma,
     Newline,
@@ -38,40 +45,47 @@ enum TokenType {
 }
 
 impl fmt::Display for TokenType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TokenType::Func => write!(f, "Func"),
-            TokenType::Uses => write!(f, "Uses"),
-            TokenType::Colon => write!(f, "Colon"),
-            TokenType::Int => write!(f, "Int"),
-            TokenType::Double => write!(f, "Double"),
+            TokenType::Note => write!(f, "Note"),
+            TokenType::Lte => write!(f, "Lte"),
+            TokenType::Gte => write!(f, "Gte"),
+            TokenType::Gt => write!(f, "Gt"),
+            TokenType::Lt => write!(f, "Lt"),
+            TokenType::Neq => write!(f, "Neq"),
+            TokenType::Eq => write!(f, "Eq"),
+            TokenType::For => write!(f, "For"),
+            TokenType::Until => write!(f, "Until"),
+            TokenType::Break => write!(f, "Break"),
+            TokenType::Continue => write!(f, "Continue"),
             TokenType::If => write!(f, "If"),
             TokenType::Then => write!(f, "Then"),
-            TokenType::Return => write!(f, "Return"),
             TokenType::Else => write!(f, "Else"),
-            TokenType::Done => write!(f, "Done"),
-            TokenType::Set => write!(f, "Set"),
-            TokenType::To => write!(f, "To"),
-            TokenType::Lt => write!(f, "Lt"),
-            TokenType::Lte => write!(f, "Lte"),
-            TokenType::Eq => write!(f, "Eq"),
-            TokenType::Gt => write!(f, "Gt"),
-            TokenType::Gte => write!(f, "Gte"),
+            TokenType::ElseIf => write!(f, "ElseIf"),
+            TokenType::Do => write!(f, "Do"),
+            TokenType::End => write!(f, "End"),
+            TokenType::Is => write!(f, "Is"),
+            TokenType::False => write!(f, "False"),
+            TokenType::True => write!(f, "True"),
+            TokenType::Function => write!(f, "Function"),
+            TokenType::Uses => write!(f, "Uses"),
+            TokenType::Or => write!(f, "Or"),
+            TokenType::And => write!(f, "And"),
             TokenType::Not => write!(f, "Not"),
-            TokenType::Quote => write!(f, "Quote"),
-            TokenType::OpenParenthesis => write!(f, "OpenParenthesis"),
-            TokenType::CloseParenthesis => write!(f, "CloseParenthesis"),
+            TokenType::Return => write!(f, "Return"),
+            TokenType::Multiply => write!(f, "Multiply"),
             TokenType::Add => write!(f, "Add"),
             TokenType::Subtract => write!(f, "Subtract"),
-            TokenType::Multiply => write!(f, "Multiply"),
             TokenType::Divide => write!(f, "Divide"),
-            TokenType::Percent => write!(f, "Percent"),
             TokenType::Power => write!(f, "Power"),
-            TokenType::Identifier(s) => write!(f, "Identifier: {s}"),
+            TokenType::OpenParenthesis => write!(f, "OpenParenthesis"),
+            TokenType::CloseParenthesis => write!(f, "CloseParenthesis"),
+            TokenType::Quote => write!(f, "Quote"),
+            TokenType::Identifier(val) => write!(f, "Identifier({})", val),
             TokenType::Comma => write!(f, "Comma"),
             TokenType::Newline => write!(f, "Newline"),
-            TokenType::Integer(n) => write!(f, "integer: {n}"),
-            TokenType::Float(n) => write!(f, "float: {n}"),
+            TokenType::Integer(val) => write!(f, "Integer({})", val),
+            TokenType::Float(val) => write!(f, "Float({})", val),
         }
     }
 }
@@ -79,18 +93,13 @@ impl fmt::Display for TokenType {
 impl TokenType {
     fn from_str(s: &str) -> TokenType {
         match s.to_lowercase().as_str() {
-            "func" => TokenType::Func,
+            "func" => TokenType::Function,
             "uses" => TokenType::Uses,
-            ":" => TokenType::Colon,
-            "int" => TokenType::Int,
-            "double" => TokenType::Double,
             "if" => TokenType::If,
             "then" => TokenType::Then,
             "return" => TokenType::Return,
             "else" => TokenType::Else,
-            "done" => TokenType::Done,
-            "set" => TokenType::Set,
-            "to" => TokenType::To,
+            "end" => TokenType::End,
             "lt" => TokenType::Lt,
             "lte" => TokenType::Lte,
             "eq" => TokenType::Eq,
@@ -104,10 +113,29 @@ impl TokenType {
             "-" => TokenType::Subtract,
             "*" => TokenType::Multiply,
             "/" => TokenType::Divide,
-            "%" => TokenType::Percent,
             "^" => TokenType::Power,
             "," => TokenType::Comma,
-            _ => TokenType::Identifier(String::from(s)),
+            "note" => TokenType::Note,
+            "until" => TokenType::Until,
+            "break" => TokenType::Break,
+            "continue" => TokenType::Continue,
+            "elseif" => TokenType::ElseIf,
+            "do" => TokenType::Do,
+            "is" => TokenType::Is,
+            "false" => TokenType::False,
+            "true" => TokenType::True,
+            "or" => TokenType::Or,
+            "and" => TokenType::And,
+            "newline" => TokenType::Newline,
+            _ => {
+                if let Ok(i) = s.parse::<i64>() {
+                    TokenType::Integer(i)
+                } else if let Ok(f) = s.parse::<f64>() {
+                    TokenType::Float(f)
+                } else {
+                    TokenType::Identifier(String::from(s))
+                }
+            }
         }
     }
 }
@@ -131,13 +159,7 @@ impl fmt::Display for Token {
 
 fn process_buffer(buffer: &mut String, tokens: &mut Vec<Token>, line_number: i32) {
     if !buffer.is_empty() {
-        let token_type = if let Ok(n) = buffer.parse::<i64>() {
-            TokenType::Integer(n)
-        } else if let Ok(n) = buffer.parse::<f64>() {
-            TokenType::Float(n)
-        } else {
-            TokenType::from_str(&buffer)
-        };
+        let token_type = TokenType::from_str(&buffer);
 
         tokens.push(Token::new(token_type, line_number));
         buffer.clear();
@@ -192,6 +214,7 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     // test integer and float parsing
@@ -207,8 +230,44 @@ mod tests {
         assert_eq!(tokens, expected);
     }
     // test parenthesis and content between
+    #[test]
+    fn test_parenthesis() {
+        let test_input = "fib(x-1) + fib(x-2) (())";
+        let tokens = get_tokens(test_input);
 
+        let expected = [
+            Token::new(TokenType::Identifier(String::from("fib")), 1),
+            Token::new(TokenType::OpenParenthesis, 1),
+            Token::new(TokenType::Identifier(String::from("x")), 1),
+            Token::new(TokenType::Subtract, 1),
+            Token::new(TokenType::Integer(1), 1),
+            Token::new(TokenType::CloseParenthesis, 1),
+            Token::new(TokenType::Add, 1),
+            Token::new(TokenType::Identifier(String::from("fib")), 1),
+            Token::new(TokenType::OpenParenthesis, 1),
+            Token::new(TokenType::Identifier(String::from("x")), 1),
+            Token::new(TokenType::Subtract, 1),
+            Token::new(TokenType::Integer(2), 1),
+            Token::new(TokenType::CloseParenthesis, 1),
+            Token::new(TokenType::OpenParenthesis, 1),
+            Token::new(TokenType::OpenParenthesis, 1),
+            Token::new(TokenType::CloseParenthesis, 1),
+            Token::new(TokenType::CloseParenthesis, 1),
+        ];
+
+        assert_eq!(tokens, expected);
+    }
+
+    // test quotations
+    fn test_quotes() {
+        let test_input = "\"this is a sample string\"";
+    }
     // test all keywords
+    fn test_complete_program() {
+        let file_string = fs::read_to_string("./example.boop")
+            .expect("unable to read provided file or file does not exist .");
 
+        let tokens = get_tokens(&file_string);
+    }
     // test
 }

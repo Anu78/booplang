@@ -1,1 +1,38 @@
-40.65 21 2.004
+func fib uses x, y, z
+    if x lt 3 then return 1
+    else return fib(x-1) + fib(x-2)
+done
+
+x is 40
+fib(x)
+
+
+-- tokens
+note: comment
+lte: <=
+gte: >=
+gt: >=
+lt: <=
+neq: !=
+eq: ==
+for
+until: while
+if
+else
+elif
+do
+end
+is: =
+function
+or
+and
+return
+false
+true
+*
++
+-
+/
+^
+(
+)
