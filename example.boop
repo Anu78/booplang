@@ -1,5 +1,4 @@
-note: this is an example file that describes how the syntax works
-
+note: this is an example file that describes how the syntax works (also a comment)
 
 func fib uses x, y, z
     if x lt 3 return 1

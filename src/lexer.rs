@@ -125,7 +125,6 @@ impl TokenType {
             "true" => TokenType::True,
             "or" => TokenType::Or,
             "and" => TokenType::And,
-            "newline" => TokenType::Newline,
             _ => {
                 if let Ok(i) = s.parse::<i64>() {
                     TokenType::Integer(i)
@@ -157,9 +156,8 @@ impl fmt::Display for Token {
 }
 
 fn process_buffer(buffer: &mut String, tokens: &mut Vec<Token>, line_number: i32) {
-    if !buffer.is_empty() && !buffer.chars().all(char::is_whitespace) {
-        let token_type = TokenType::from_str(&buffer);
-
+    if !buffer.trim().is_empty() {
+        let token_type = TokenType::from_str(buffer);
         tokens.push(Token::new(token_type, line_number));
         buffer.clear();
     }
@@ -175,7 +173,7 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
 
     while let Some(&c) = chars.peek() {
         if c.is_whitespace() {
-            if buffer == "note" {
+            if buffer.to_lowercase() == "note" {
                 while let Some(next) = chars.next() {
                     if next == '\n' {
                         line_number += 1;
@@ -201,7 +199,7 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
                 buffer.push(next);
             }
             tokens.push(Token::new(
-                TokenType::StringLiteral(buffer.clone()),
+                TokenType::StringLiteral(String::from(&buffer)),
                 line_number,
             ));
             buffer.clear();
