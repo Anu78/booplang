@@ -2,7 +2,7 @@
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
-enum TokenType {
+pub enum TokenType {
     Note,
     Lte,
     Gte,
@@ -139,8 +139,8 @@ impl TokenType {
 }
 #[derive(Debug, PartialEq)]
 pub struct Token {
-    token: TokenType,
-    line_number: i32,
+    pub token: TokenType,
+    pub line_number: i32,
 }
 
 impl Token {

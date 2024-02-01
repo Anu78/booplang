@@ -1,5 +1,6 @@
 mod ast;
 mod lexer;
+use ast::generate_ast;
 use lexer::get_tokens;
 use std::fs;
 
@@ -20,5 +21,7 @@ fn main() {
     for token in tokens.iter() {
         println!("{token}");
     }
-    //
+
+    // generate AST
+    let ast = generate_ast(tokens);
 }

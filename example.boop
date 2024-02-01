@@ -1,10 +1,11 @@
 note: this is an example file that describes how the syntax works (also a comment)
 
-func fib uses x, y, z
+func fib uses x
     if x lt 3 return 1
     else return fib(x-1) + fib(x-2)
 end
 
-x is 40
-y is "hello world"
-fib(x)
+func main
+    x is 40
+    return fib(x)
+end
