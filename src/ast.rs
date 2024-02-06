@@ -2,134 +2,138 @@
 use crate::lexer::Token;
 use crate::lexer::TokenType;
 
-struct VariableDeclaration {
-    name: String,
-    var_type: Type,
-    value: Expression,
-}
-
-enum Type {
-    Integer,
-    Float,
-    Constant,
-    Inferred,
-}
-
-struct Function {
-    name: String,
-    parameters: Vec<Parameter>,
-    return_type: Type,
-    statements: Vec<Statement>,
-}
-
-struct Parameter {
-    var_type: Type,
-    name: String,
-}
-
-enum Statement {
-    ForLoop(ForLoop),
-    UntilLoop(UntilLoop),
-    VariableDeclaration(VariableDeclaration),
-    IfStatement(IfStatement),
+#[derive(Debug, PartialEq)]
+enum ASTNode {
+    Program(Vec<ASTNode>),
+    Function {
+        name: String,
+        params: Vec<Expression>,
+        body: Vec<ASTNode>,
+    },
+    PrintStatement(Expression),
+    ReturnStatement(Expression),
     Expression(Expression),
-    Return(Expression),
-    FunctionCall(FunctionCall),
 }
 
-struct ForLoop {
-    init: Box<Statement>,
-    condition: Expression,
-    post_loop: Box<Statement>,
-    body: Vec<Statement>,
-}
-
-struct UntilLoop {
-    condition: Expression,
-    body: Vec<Statement>,
-}
-
-struct IfStatement {
-    condition: Expression,
-    body: Vec<Statement>,
-    elif_branches: Option<Vec<ElifBranch>>, // optional
-    else_branch: Option<Vec<Statement>>,    // optional
-}
-
-struct ElifBranch {
-    condition: Expression,
-    body: Vec<Statement>,
-}
-
-struct FunctionCall {
-    name: String,
-    paremeters: Vec<Expression>,
-}
-
+#[derive(Debug, PartialEq)]
 enum Expression {
-    BinaryExpression(BinaryExpression),
-    VariableAccess(String),
-    Value(Type),
+    NumberLiteral(i32), // Represents a numeric literal
+    Variable(String),   // Represents a variable (which might be used in future extensions)
+    FunctionCall {
+        name: String,
+        params: Vec<Expression>,
+    },
 }
 
-struct BinaryExpression {
-    left: Box<Expression>,
-    operation: Operation,
-    right: Box<Expression>,
+struct Parser {
+    tokens: Vec<Token>,
+    current: usize,
+    length: usize,
 }
 
-enum Operation {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    GreaterThan,
-    GreaterThanEquals,
-    LessThan,
-    LessThanEquals,
-    Equals,
-}
+impl Parser {
+    pub fn new(tokens: Vec<Token>, current: usize) -> Parser {
+        Parser {
+            tokens,
+            current,
+            length: tokens.len(),
+        }
+    }
 
-pub struct Program {
-    global_variables: Vec<VariableDeclaration>,
-    functions: Vec<Function>,
-}
+    // entry point for parser
+    pub fn parse_program(&mut self) -> ASTNode {
+        let mut statements = Vec::new();
 
-pub fn generate_ast(tokens: Vec<Token>) -> Program {
-    let mut in_function = false;
+        while !self.at_end() {
+            statements.push(self.parse_statement());
+        }
 
-    let mut program = Program {
-        global_variables: Vec::new(),
-        functions: Vec::new(),
-    };
+        ASTNode::Program(statements)
+    }
 
-    let mut tokens_peekable = tokens.iter().peekable();
+    // secondary parse methods
+    fn parse_statement(&mut self) -> ASTNode {
+        match self.peek().token {
+            TokenType::Function => self.parse_function(),
+            TokenType::Return => self.parse_return(),
 
-    while let Some(tok) = tokens_peekable.next() {
-        match &tok.token {
-            TokenType::Function => {
-                println!("function found!");
-            }
-            TokenType::Identifier(s) => {}
-            TokenType::If => {}
-            TokenType::Return => {}
-            TokenType::End => {}
-            TokenType::OpenParenthesis => {}
-            // function: assume params until newline / start function scope. check if identifier is main / label
-            // identifier: check for "is" and then parse next expression until newline
-            // if: check for condition
-            // elif: add condition, add branch to if statement if if statement was the last token
-            // else:
-            // return: combine expressions until newline.
-            // end: end function scope and return to global scope
-            // paren: parse until close paren, create expressions
-            // identifier( = function call. parse until )
-            //
-            invalid_token => {
-                println!("Invalid token: {}", invalid_token);
+            undefined => {
+                panic!(
+                    "undefined token {} found on line {}",
+                    undefined,
+                    self.get_line_number()
+                )
             }
         }
     }
 
-    program
+    fn parse_function(&mut self) -> ASTNode {
+        let mut body = Vec::new(); // body of function
+        let mut params = Vec::new(); // string array of params
+        let mut name: String;
+
+        // parse function body
+        while !self.check(TokenType::End) {
+            body.push(self.parse_statement());
+        }
+
+        // return function ASTNode
+        ASTNode::Function { name, params, body }
+    }
+
+    fn parse_return(&mut self) -> ASTNode {
+        let value = self.parse_expression();
+
+        ASTNode::ReturnStatement(value)
+    }
+
+    fn parse_function_call(&mut self) -> Expression {
+        // parse function name
+        // parse function parameters
+
+        // Expression::FunctionCall {
+        //     name: "",
+        //     params: ,
+        // }
+    }
+
+    fn parse_expression(&mut self) -> Expression {}
+
+    // utility functions
+    fn consume(&mut self, token: TokenType, message: &str) {
+        if self.check(token) {
+            self.advance();
+        } else {
+            println!("missing {} on line {}", message, self.get_line_number());
+        }
+    }
+
+    fn get_line_number(&self) -> i32 {
+        self.tokens[self.current].line_number
+    }
+
+    fn advance(&mut self) -> &Token {
+        if !self.at_end() {
+            self.current += 1;
+        }
+        &self.tokens[self.current - 1]
+    }
+
+    fn at_end(&self) -> bool {
+        self.current > self.length
+    }
+
+    fn peek(&self) -> &TokenType {
+        &self.tokens[self.current].token
+    }
+
+    fn check(&self, token: TokenType) -> bool {
+        if self.at_end() {
+            false
+        } else {
+            let other = self.peek();
+
+            matches!(token, other)
+        }
+    }
 }
