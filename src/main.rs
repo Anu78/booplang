@@ -1,5 +1,6 @@
 mod ast;
 mod lexer;
+use ast::Parser;
 use lexer::get_tokens;
 use std::fs;
 
@@ -17,10 +18,11 @@ fn main() {
 
     let tokens = get_tokens(&file_string);
 
-    for token in tokens.iter() {
-        println!("{token}");
-    }
+    // for token in tokens.iter() {
+    //     println!("{token}");
+    // }
 
     // generate AST
-    // let ast = generate_ast(tokens);
+    let mut ast = Parser::new(tokens);
+    let tree = ast.parse_program();
 }

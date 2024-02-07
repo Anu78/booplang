@@ -3,7 +3,7 @@ use crate::lexer::Token;
 use crate::lexer::TokenType;
 
 #[derive(Debug, PartialEq)]
-enum ASTNode {
+pub enum ASTNode {
     Program(Vec<ASTNode>),
     Function {
         name: String,
@@ -13,31 +13,37 @@ enum ASTNode {
     PrintStatement(Expression),
     ReturnStatement(Expression),
     Expression(Expression),
+    Declaration {
+        name: String,
+        value: Expression,
+    },
+    IfStatement {
+        condition: Expression,
+        then_branch: Vec<ASTNode>,
+        elif_branches: Vec<(Expression, Vec<ASTNode>)>,
+        else_branch: Option<Vec<ASTNode>>,
+    },
 }
 
 #[derive(Debug, PartialEq)]
-enum Expression {
-    NumberLiteral(i32), // Represents a numeric literal
-    Variable(String),   // Represents a variable (which might be used in future extensions)
+pub enum Expression {
+    Number(i32),
+    StringLiteral(String),
+    Variable(String),
     FunctionCall {
         name: String,
         params: Vec<Expression>,
     },
 }
 
-struct Parser {
+pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
-    length: usize,
 }
 
 impl Parser {
-    pub fn new(tokens: Vec<Token>, current: usize) -> Parser {
-        Parser {
-            tokens,
-            current,
-            length: tokens.len(),
-        }
+    pub fn new(tokens: Vec<Token>) -> Parser {
+        Parser { tokens, current: 0 }
     }
 
     // entry point for parser
@@ -53,9 +59,22 @@ impl Parser {
 
     // secondary parse methods
     fn parse_statement(&mut self) -> ASTNode {
-        match self.peek().token {
+        match self.peek() {
             TokenType::Function => self.parse_function(),
             TokenType::Return => self.parse_return(),
+            TokenType::If => self.parse_conditional(),
+            TokenType::Identifier(s) => {
+                let next_token = self.peek_n(2);
+
+                match next_token {
+                    Some(TokenType::OpenParenthesis) => self.parse_function_call(),
+                    Some(TokenType::Is) => self.parse_variable_declaration(),
+                    _ => panic!(
+                        "invalid variable declaration syntax on line {}",
+                        self.get_line_number()
+                    ),
+                }
+            }
 
             undefined => {
                 panic!(
@@ -67,13 +86,16 @@ impl Parser {
         }
     }
 
+    fn parse_variable_declaration(&mut self) -> ASTNode {}
+
+    fn parse_conditional(&mut self) -> ASTNode {}
+
     fn parse_function(&mut self) -> ASTNode {
         let mut body = Vec::new(); // body of function
-        let mut params = Vec::new(); // string array of params
-        let mut name: String;
+        let params = Vec::new(); // array of expressions
 
         // parse function body
-        while !self.check(TokenType::End) {
+        while !self.at_end() && !self.check(TokenType::End) {
             body.push(self.parse_statement());
         }
 
@@ -87,24 +109,23 @@ impl Parser {
         ASTNode::ReturnStatement(value)
     }
 
-    fn parse_function_call(&mut self) -> Expression {
+    fn parse_function_call(&mut self) -> ASTNode {
         // parse function name
         // parse function parameters
 
-        // Expression::FunctionCall {
-        //     name: "",
-        //     params: ,
-        // }
+        ASTNode::Expression(Expression::Number(20))
     }
 
-    fn parse_expression(&mut self) -> Expression {}
+    fn parse_expression(&mut self) -> Expression {
+        Expression::Number(20)
+    }
 
     // utility functions
-    fn consume(&mut self, token: TokenType, message: &str) {
-        if self.check(token) {
-            self.advance();
+    fn consume(&mut self, expected: TokenType, message: &str) -> Option<&Token> {
+        if self.check(expected) {
+            self.advance()
         } else {
-            println!("missing {} on line {}", message, self.get_line_number());
+            panic!("Error at line {}: {}", self.get_line_number(), message);
         }
     }
 
@@ -112,19 +133,31 @@ impl Parser {
         self.tokens[self.current].line_number
     }
 
-    fn advance(&mut self) -> &Token {
-        if !self.at_end() {
+    fn advance(&mut self) -> Option<&Token> {
+        if self.at_end() {
+            None
+        } else {
+            let token = &self.tokens[self.current];
             self.current += 1;
+            Some(token)
         }
-        &self.tokens[self.current - 1]
     }
 
     fn at_end(&self) -> bool {
-        self.current > self.length
+        self.check(TokenType::Eof)
     }
 
+    // default peek is one token ahead
     fn peek(&self) -> &TokenType {
         &self.tokens[self.current].token
+    }
+
+    fn peek_n(&self, n: usize) -> Option<&TokenType> {
+        if self.current + n >= self.tokens.len() {
+            None
+        } else {
+            Some(&self.tokens[self.current + n].token)
+        }
     }
 
     fn check(&self, token: TokenType) -> bool {

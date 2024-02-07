@@ -42,6 +42,7 @@ pub enum TokenType {
     Newline,
     Integer(i64),
     Float(f64),
+    Eof,
 }
 
 impl fmt::Display for TokenType {
@@ -86,6 +87,7 @@ impl fmt::Display for TokenType {
             TokenType::Newline => write!(f, "Newline"),
             TokenType::Integer(val) => write!(f, "Integer({})", val),
             TokenType::Float(val) => write!(f, "Float({})", val),
+            TokenType::Eof => write!(f, "EOF"),
         }
     }
 }
@@ -224,6 +226,8 @@ pub fn get_tokens(data: &str) -> Vec<Token> {
     if !buffer.is_empty() {
         process_buffer(&mut buffer, &mut tokens, line_number);
     }
+
+    tokens.push(Token::new(TokenType::Eof, line_number));
 
     tokens
 }
