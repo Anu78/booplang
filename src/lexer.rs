@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum TokenType {
     Note,
     Lte,
@@ -138,8 +138,39 @@ impl TokenType {
             }
         }
     }
+    fn is_binary_comparision_operator(&self) -> bool {
+        match self {
+            TokenType::Lte
+            | TokenType::Gte
+            | TokenType::Gt
+            | TokenType::Lt
+            | TokenType::Neq
+            | TokenType::Eq
+            | TokenType::Or
+            | TokenType::And
+            | TokenType::Not
+            | TokenType::Power => true,
+            _ => false,
+        }
+    }
+    fn is_unary_operator(&self) -> bool {
+        match self {
+            TokenType::Not => true,
+            _ => false,
+        }
+    }
+    fn is_math_operator(&self) -> bool {
+        match self {
+            TokenType::Add
+            | TokenType::Subtract
+            | TokenType::Multiply
+            | TokenType::Divide
+            | TokenType::Power => true,
+            _ => false,
+        }
+    }
 }
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub token: TokenType,
     pub line_number: i32,

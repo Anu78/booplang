@@ -13,15 +13,28 @@ pub enum ASTNode {
     PrintStatement(Expression),
     ReturnStatement(Expression),
     Expression(Expression),
-    Declaration {
+    CreateVariable {
         name: String,
         value: Expression,
     },
     IfStatement {
-        condition: Expression,
+        condition: Condition,
         then_branch: Vec<ASTNode>,
         elif_branches: Vec<(Expression, Vec<ASTNode>)>,
         else_branch: Option<Vec<ASTNode>>,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Condition {
+    Binary {
+        left: Box<Expression>,
+        operator: TokenType,
+        right: Box<Expression>,
+    },
+    Unary {
+        operator: TokenType,
+        right: Box<Expression>,
     },
 }
 
@@ -33,6 +46,11 @@ pub enum Expression {
     FunctionCall {
         name: String,
         params: Vec<Expression>,
+    },
+    BinaryOperation {
+        left: Box<Expression>,
+        operator: TokenType,
+        right: Box<Expression>,
     },
 }
 
@@ -51,6 +69,7 @@ impl Parser {
         let mut statements = Vec::new();
 
         while !self.at_end() {
+
             statements.push(self.parse_statement());
         }
 
@@ -62,8 +81,8 @@ impl Parser {
         match self.peek() {
             TokenType::Function => self.parse_function(),
             TokenType::Return => self.parse_return(),
-            TokenType::If => self.parse_conditional(),
-            TokenType::Identifier(s) => {
+            // TokenType::If => self.parse_conditional(),
+            TokenType::Identifier(_) => {
                 let next_token = self.peek_n(2);
 
                 match next_token {
@@ -86,16 +105,73 @@ impl Parser {
         }
     }
 
-    fn parse_variable_declaration(&mut self) -> ASTNode {}
+    fn parse_variable_declaration(&mut self) -> ASTNode {
+        let var_ident = self.consume(
+            TokenType::Identifier(String::from("")),
+            "expected a variable name",
+        );
 
-    fn parse_conditional(&mut self) -> ASTNode {}
+        let var_name = match var_ident.token {
+            TokenType::Identifier(str) => str,
+            _ => {
+                panic!("expected a valid identifier name")
+            }
+        };
+
+        self.consume(TokenType::Is, "expected an is keyword");
+
+        let var_value = self.parse_expression(TokenType::Newline);
+
+        ASTNode::CreateVariable {
+            name: var_name,
+            value: var_value,
+        }
+    }
+
+    fn parse_conditional(&mut self) -> ASTNode {
+        let mut if_branch: Vec<ASTNode> = Vec::new();
+        self.consume(TokenType::If, "expected an if keyword");
+        let conditional = self.parse_expression(TokenType::Newline);
+
+        // parse conditional into condition
+        ASTNode::IfStatement {
+            condition: Condition::Unary {
+                operator: TokenType::Not,
+                right: Box::new(Expression::Variable(String::from("test"))),
+            },
+            then_branch: Vec::new(),
+            elif_branches: Vec::new(),
+            else_branch: None,
+        }
+    }
 
     fn parse_function(&mut self) -> ASTNode {
         let mut body = Vec::new(); // body of function
-        let params = Vec::new(); // array of expressions
+        let mut params = Vec::new(); // array of expressions
+
+        // consume function keyword
+        self.consume(TokenType::Function, "function keyword expected");
+        let name_token = self.consume(
+            TokenType::Identifier(String::from("")), // identifier with any variant
+            "function name expected",
+        );
+        let name = if let TokenType::Identifier(name) = name_token.token {
+            name
+        } else {
+            panic!("invalid function name on line {}", self.get_line_number());
+        };
+
+        // parse function parameters
+        self.consume(TokenType::Uses, "expected a uses keyword");
+
+        // assume one parameter for now
+        self.consume(
+            TokenType::Identifier(String::from("")),
+            "expected a parameter name",
+        );
 
         // parse function body
-        while !self.at_end() && !self.check(TokenType::End) {
+        while !self.at_end() && !self.check(&TokenType::End) {
             body.push(self.parse_statement());
         }
 
@@ -104,33 +180,69 @@ impl Parser {
     }
 
     fn parse_return(&mut self) -> ASTNode {
-        let value = self.parse_expression();
+        let value = self.parse_expression(TokenType::Newline);
 
-        ASTNode::ReturnStatement(value)
+        ASTNode::ReturnStatement(Expression::Number(20))
     }
 
     fn parse_function_call(&mut self) -> ASTNode {
+        let mut params = Vec::new();
         // parse function name
-        // parse function parameters
+        let func_name = self.consume(
+            TokenType::Identifier(String::from("")),
+            "expected a function name",
+        );
 
-        ASTNode::Expression(Expression::Number(20))
+        let name = if let TokenType::Identifier(name) = func_name.token {
+            name
+        } else {
+            panic!("invalid function name on line {}", self.get_line_number());
+        };
+
+        ASTNode::Expression(Expression::FunctionCall { name, params })
     }
 
-    fn parse_expression(&mut self) -> Expression {
+    fn parse_expression(&mut self, until: TokenType) -> Expression {
+        let tokens = self.peek_until(&until);
+
+        for i in tokens.iter() {
+            println!("{}", i.token)
+        }
+
+        // actual parsing logic here
+        //
+
         Expression::Number(20)
     }
 
-    // utility functions
-    fn consume(&mut self, expected: TokenType, message: &str) -> Option<&Token> {
-        if self.check(expected) {
-            self.advance()
+    // utility functions start here ⬇️
+    fn consume(&mut self, expected: TokenType, message: &str) -> Token {
+        if self.check(&expected) {
+            let token = self.tokens[self.current].clone(); // Clone the token to return it
+            self.advance(); // Move to the next token
+            token
         } else {
-            panic!("Error at line {}: {}", self.get_line_number(), message);
+            panic!("{} on line {}", message, self.get_line_number());
         }
     }
 
     fn get_line_number(&self) -> i32 {
         self.tokens[self.current].line_number
+    }
+
+    fn peek_until(&self, until: &TokenType) -> Vec<&Token> {
+        let mut tokens = Vec::new();
+        let mut index = self.current; // Use a local index instead of modifying `self.current`
+
+        // Loop until the end is reached or the `until` token type is found
+        while index < self.tokens.len()
+            && std::mem::discriminant(&self.tokens[index].token) != std::mem::discriminant(until)
+        {
+            tokens.push(&self.tokens[index]);
+            index += 1;
+        }
+
+        tokens
     }
 
     fn advance(&mut self) -> Option<&Token> {
@@ -144,7 +256,7 @@ impl Parser {
     }
 
     fn at_end(&self) -> bool {
-        self.check(TokenType::Eof)
+        self.check(&TokenType::Eof)
     }
 
     // default peek is one token ahead
@@ -153,20 +265,14 @@ impl Parser {
     }
 
     fn peek_n(&self, n: usize) -> Option<&TokenType> {
-        if self.current + n >= self.tokens.len() {
-            None
-        } else {
-            Some(&self.tokens[self.current + n].token)
-        }
+        self.tokens.get(self.current + n).map(|token| &token.token)
     }
 
-    fn check(&self, token: TokenType) -> bool {
-        if self.at_end() {
-            false
+    fn check(&self, token: &TokenType) -> bool {
+        if let Some(next_token) = self.tokens.get(self.current) {
+            std::mem::discriminant(&next_token.token) == std::mem::discriminant(token)
         } else {
-            let other = self.peek();
-
-            matches!(token, other)
+            false
         }
     }
 }
